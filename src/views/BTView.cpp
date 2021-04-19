@@ -166,7 +166,7 @@ void BTView::bt_loop()
                     text = "Enter time as HH:MM\n";
                     break;
                 case 3:
-                    text = "Enter date as DD/MM/YYYY/D, D=1 for monday\n";
+                    text = "Enter date as DD/MM/YYYY/D, D=1 for Sunday\n";
                     break;
 
                 default:
@@ -203,9 +203,9 @@ void BTView::bt_loop()
             break;
         case 3:
             RTC_DateStruct.Date = (uint8_t)bt_incoming.substring(0, 2).toInt();
-            RTC_DateStruct.Month = (uint8_t)bt_incoming.substring(3, 5).toInt() - 1;
+            RTC_DateStruct.Month = (uint8_t)bt_incoming.substring(3, 5).toInt();
             RTC_DateStruct.Year = (uint16_t)bt_incoming.substring(6, 10).toInt();
-            RTC_DateStruct.WeekDay = (uint16_t)bt_incoming.substring(11, 12).toInt();
+            RTC_DateStruct.WeekDay = (uint16_t)bt_incoming.substring(11, 12).toInt() - 1;
 
             ESP_LOGD(TAG, "Update date to %d/%d/%d/%d",
                      RTC_DateStruct.Date,

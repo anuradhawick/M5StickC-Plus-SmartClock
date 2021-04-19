@@ -4,6 +4,10 @@
 
 static const char *TAG = "TIME_VIEW";
 
+extern RTC_TimeTypeDef RTC_TimeStruct;
+extern RTC_DateTypeDef RTC_DateStruct;
+extern String days[7];
+
 TimeView::TimeView()
 {
     M5.begin();
@@ -61,7 +65,7 @@ void TimeView::render()
     if (d_cache != RTC_DateStruct.WeekDay)
     {
         d_cache = RTC_DateStruct.WeekDay;
-        sprintf(day, "%-10s", days[d_cache - 1].c_str());
+        sprintf(day, "%-10s", days[d_cache].c_str());
         disp_buffer->drawString(day, 10, 5, 4);
     }
 
@@ -72,7 +76,7 @@ void TimeView::render()
         mn_cache = RTC_DateStruct.Month;
         yr_cache = RTC_DateStruct.Year;
         disp_buffer->setTextColor(grey, TFT_BLACK);
-        disp_buffer->drawString(String(dt_cache) + "/" + String(mn_cache + 1), 10, 30, 4);
+        disp_buffer->drawString(String(dt_cache) + "/" + String(mn_cache), 10, 30, 4);
         disp_buffer->drawString(String(yr_cache), 70, 35, 2);
         disp_buffer->setTextColor(TFT_WHITE, TFT_BLACK);
     }

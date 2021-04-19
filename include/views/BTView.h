@@ -11,6 +11,7 @@ public:
     ~BTView();
 
     void render();
+    bool receive_event(EVENTS::event event){ return false; };
 
 private:
     void bt_loop();
