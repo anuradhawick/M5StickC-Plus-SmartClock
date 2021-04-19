@@ -6,6 +6,7 @@
 #include "views/AnalogClock.h"
 #include "views/BrightnessView.h"
 #include "tasks.h"
+#include "MPU6886.h"
 
 static const char *TAG = "MAIN";
 
@@ -14,10 +15,9 @@ uint8_t state = 1;
 unsigned long rst_clicked_time = millis();
 unsigned long home_clicked_time = millis();
 unsigned long active_time = millis();
-float pitch, roll, yaw;
-float next_pitch, next_roll, next_yaw;
 
 TASKS::Dimmer dimmer;
+TASKS::IMUManager imumgr;
 
 bool rst_btn_clicked()
 {
@@ -49,60 +49,47 @@ bool home_btn_clicked()
 void setup()
 {
     M5.begin();
-    M5.Axp.ScreenBreath(9);
     M5.Imu.Init();
+    M5.Axp.ScreenBreath(9);
 
     ESP_LOGD(TAG, "%d", M5.Axp.Read8bit(0x28) >> 4);
 
     active_view = new AnalogClock();
 
     pinMode(M5_BUTTON_RST, INPUT_PULLUP);
-    pinMode(M5_BUTTON_HOME, INPUT_PULLUP);
+    pinMode(M5_BUTTON_HOME, INPUT_PULLUP);    
 }
 
 void loop()
 {
-    // // as long as shaking, follow the attitude
-    // if (!dimmer.is_dim())
-    // {
-    //     M5.IMU.getAhrsData(&pitch, &roll, &yaw);
-    // }
-    // else
-    // {
-    //     M5.IMU.getAhrsData(&next_pitch, &next_roll, &next_yaw);
-
-    //     // if dimmed keep comparing
-    //     if (abs(next_pitch - pitch) > 5 || abs(next_roll - roll) > 5 || abs(next_yaw - yaw) > 5)
-    //     {
-    //         active_time = millis();
-    //         dimmer.recover();
-    //         ESP_LOGD(TAG, "Exit dim by shake");
-    //     }
-    //     // follow small changes to avoid wakeup
-    //     else
-    //     {
-    //         pitch = next_pitch;
-    //         roll = next_roll;
-    //         yaw = next_yaw;
-    //     }
-    // }
+    // no dimming as long as in shake
+    if (imumgr.is_moved())
+    {
+        dimmer.recover();
+        active_time = millis();
+    }
 
     // auto dimming timed
-    if (active_time + 10000 < millis())
+    if (active_time + 5000 < millis())
     {
         dimmer.go_dim();
     }
 
-    if (active_time + 30000 < millis())
+    // auto screenoff timed
+    if (active_time + 10000 < millis())
     {
         dimmer.go_dark();
     }
 
-    if (active_time + 60000 < millis())
-    {
-        M5.Axp.PowerOff();
-    }
-
+    // if (active_time + 10000 < millis())
+    // {
+    //     ESP_LOGD(TAG, "SLEEPING");
+    //     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
+    //     esp_sleep_enable_ext0_wakeup(GPIO_NUM_37, LOW);
+    //     M5.Axp.SetSleep();
+    //     esp_deep_sleep_start();
+    // }
+  
     // render view
     active_view->render();
 
