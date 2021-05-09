@@ -25,7 +25,7 @@ private:
     uint8_t dt_cache = 35;
     uint8_t mn_cache = 35;
     uint16_t yr_cache = 0;
-    uint8_t d_cache = 10;
+    uint8_t d_cache = 0;
     uint8_t h_cache = 25;
     uint8_t m_cache = 60;
     uint8_t s_cache = 60;

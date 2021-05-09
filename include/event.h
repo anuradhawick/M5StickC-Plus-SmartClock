@@ -4,8 +4,8 @@ namespace EVENTS
 {
     enum event
     {
-        HOME_CLICKED,
-        POWER_CLICKED,
-        RST_CLICKED
+        HOME_PRESSED,
+        POWER_PRESSED,
+        RESET_PRESSED
     };
 };

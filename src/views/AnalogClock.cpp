@@ -60,7 +60,7 @@ void AnalogClock::render_date()
                             2);
     d_cache = RTC_DateStruct.WeekDay;
 
-    disp_buffer->drawString(days[d_cache - 1].c_str(),
+    disp_buffer->drawString(days[d_cache].c_str(),
                             140 + (100 - M5.Lcd.textWidth(days[d_cache].c_str())) / 2,
                             67,
                             2);

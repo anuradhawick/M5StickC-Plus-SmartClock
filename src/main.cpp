@@ -6,7 +6,6 @@
 #include "views/AnalogClock.h"
 #include "views/BrightnessView.h"
 #include "tasks.h"
-#include "MPU6886.h"
 
 static const char *TAG = "MAIN";
 
@@ -18,32 +17,39 @@ unsigned long active_time = millis();
 
 TASKS::Dimmer dimmer;
 TASKS::IMUManager imumgr;
+int32_t flags = 0;
 
-bool rst_btn_clicked()
+#define M5_BUTTON_RESET_PRESSED 0x01
+#define M5_BUTTON_HOME_PRESSED 0x02
+#define M5_BUTTON_POWER_PRESSED 0x04
+
+void event_loop();
+
+void reset_buttton_pressed()
 {
-    if (rst_clicked_time + 500 > millis())
+    if (!(rst_clicked_time + 500 > millis()))
     {
-        return false;
+        ESP_LOGD(TAG, "Reset Buttion Pressed");
+
+        rst_clicked_time = millis();
+        flags = flags | M5_BUTTON_RESET_PRESSED;
     }
-
-    ESP_LOGD(TAG, "Rst Btn Clicked");
-
-    rst_clicked_time = millis();
-
-    return true;
 }
 
-bool home_btn_clicked()
+void home_button_pressed()
 {
-    if (home_clicked_time + 500 > millis())
+    if (!(home_clicked_time + 500 > millis()))
     {
-        return false;
+        ESP_LOGD(TAG, "Home Button Pressed");
+        home_clicked_time = millis();
+        flags = flags | M5_BUTTON_HOME_PRESSED;
     }
+}
 
-    ESP_LOGD(TAG, "Home btn Clicked");
-    home_clicked_time = millis();
-
-    return true;
+void power_button_pressed()
+{
+    ESP_LOGD(TAG, "Power Button Pressed");
+    flags = flags | M5_BUTTON_POWER_PRESSED;
 }
 
 void setup()
@@ -57,11 +63,16 @@ void setup()
     active_view = new AnalogClock();
 
     pinMode(M5_BUTTON_RST, INPUT_PULLUP);
-    pinMode(M5_BUTTON_HOME, INPUT_PULLUP);    
+    pinMode(M5_BUTTON_HOME, INPUT_PULLUP);
 }
 
 void loop()
 {
+    // render view
+    active_view->render();
+
+    event_loop();
+
     // no dimming as long as in shake
     if (imumgr.is_moved())
     {
@@ -81,86 +92,84 @@ void loop()
         dimmer.go_dark();
     }
 
-    // if (active_time + 10000 < millis())
-    // {
-    //     ESP_LOGD(TAG, "SLEEPING");
-    //     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    //     esp_sleep_enable_ext0_wakeup(GPIO_NUM_37, LOW);
-    //     M5.Axp.SetSleep();
-    //     esp_deep_sleep_start();
-    // }
-  
-    // render view
-    active_view->render();
-
+    // capture events
     if (digitalRead(M5_BUTTON_RST) == LOW)
     {
-        active_time = millis();
-        if (dimmer.is_dim())
-        {
-            dimmer.recover();
-        }
-
-        if (rst_btn_clicked() && !dimmer.dim_exitting())
-        {
-            active_view->receive_event(EVENTS::RST_CLICKED);
-        }
+        reset_buttton_pressed();
     }
 
     if (M5.Axp.GetBtnPress() == 0x02)
     {
-        ESP_LOGD(TAG, "Power btn Clicked");
-        active_time = millis();
-        if (dimmer.is_dim())
-        {
-            dimmer.recover();
-        }
-        else if (!dimmer.dim_exitting())
-        {
-            active_view->receive_event(EVENTS::POWER_CLICKED);
-        }
+        power_button_pressed();
     }
 
     if (digitalRead(M5_BUTTON_HOME) == LOW)
     {
-        active_time = millis();
+        home_button_pressed();
+    }
+
+    // propagate events to view
+    if (flags > 0)
+    {
         if (dimmer.is_dim())
         {
             dimmer.recover();
+            active_time = millis();
+            flags = 0;
         }
-        else if (home_btn_clicked() && !dimmer.dim_exitting())
+        else if(!dimmer.dim_exitting())
         {
-            if (!active_view->receive_event(EVENTS::HOME_CLICKED))
-            {
-                state++;
+            event_loop();
+            flags = 0;
+        }
+        else
+        {
+            flags = 0;
+        }
+    }
+}
 
-                if (state > 4)
-                {
-                    state = 1;
-                }
+void event_loop()
+{
+    if (flags && M5_BUTTON_RESET_PRESSED)
+    {
+        active_view->receive_event(EVENTS::RESET_PRESSED);
+    }
 
-                delete active_view;
-                active_view = NULL;
+    if (flags && M5_BUTTON_POWER_PRESSED)
+    {
+        active_view->receive_event(EVENTS::POWER_PRESSED);
+    }
 
-                switch (state)
-                {
-                case 1:
-                    active_view = new AnalogClock();
-                    break;
-                case 2:
-                    active_view = new TimeView();
-                    break;
-                case 3:
-                    active_view = new BrightnessView();
-                    break;
-                case 4:
-                    active_view = new BTView();
-                    break;
+    if (flags && M5_BUTTON_HOME_PRESSED)
+    {
+        state++;
 
-                default:
-                    break;
-                }
-            }
+        if (state > 4)
+        {
+            state = 1;
+        }
+
+        delete active_view;
+        active_view = NULL;
+
+        switch (state)
+        {
+        case 1:
+            active_view = new AnalogClock();
+            break;
+        case 2:
+            active_view = new TimeView();
+            break;
+        case 3:
+            active_view = new BrightnessView();
+            break;
+        case 4:
+            active_view = new BTView();
+            break;
+
+        default:
+            break;
         }
     }
 }

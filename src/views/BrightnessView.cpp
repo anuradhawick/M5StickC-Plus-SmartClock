@@ -92,7 +92,7 @@ bool BrightnessView::receive_event(EVENTS::event event)
 {
     switch (event)
     {
-    case EVENTS::RST_CLICKED:
+    case EVENTS::RESET_PRESSED:
         brightness--;
 
         if (brightness < 7)
@@ -101,7 +101,7 @@ bool BrightnessView::receive_event(EVENTS::event event)
         }
         M5.Axp.ScreenBreath(brightness);
         return true;
-    case EVENTS::POWER_CLICKED:
+    case EVENTS::POWER_PRESSED:
         brightness++;
 
         if (brightness > 12)
